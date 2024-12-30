@@ -9,4 +9,5 @@ public interface BookDao extends JpaRepository<Book, Long> {
     book.setIsbn(isbn);
     return book;
   }
+  Book findByIsbn(String isbn);
 }
