@@ -19,9 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/books")
 public class BookController {
-  private BookDao bookDao;
-  private TenantIdentifierResolver tenantIdentifierResolver;
-  private TransactionTemplate txTemplate;
+  private final BookDao bookDao;
+  private final TenantIdentifierResolver tenantIdentifierResolver;
+  private final TransactionTemplate txTemplate;
+  private final DatabaseRouter databaseRouter;
 
   @GetMapping
   public ResponseEntity<List<Book>> getBooks() {
@@ -37,6 +38,13 @@ public class BookController {
       log.info("No book with isbn {} in DBA; switching to DBB", isbn);
       tenantIdentifierResolver.setCurrentTenant(DBB);
       book = bookDao.findByIsbn(isbn);
+      if(  book == null ) {
+        log.info("No book with isbn {} in DBB; switching to custom DB", isbn);
+        databaseRouter.getTargetDataSources().put("custom", databaseRouter.createEmbeddedDatabase("custom"));
+        databaseRouter.setTargetDataSources(databaseRouter.getTargetDataSources());
+        createBook("custom", isbn, isbn);
+        book = bookDao.findByIsbn(isbn);
+      }
     }
     return ResponseEntity.ok(book);
   }
